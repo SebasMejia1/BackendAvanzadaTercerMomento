@@ -7,15 +7,17 @@ const router = express.Router();
 // Middleware
 router.use(cors());
 // Rutas
+
 //* LOGIN
 router.post("/login", async (req, res) => {
-  let { username, password } = req.params;
-  console.log(username, password);
-  const user = await User.findOne({ username: username }, { err, data });
+  let usuario = req.body;
+  const user = await User.findOne({ username: usuario.username });
   if (user) {
     console.log("El usuario existe");
-    if (user.password == password) {
+    if (user.password == usuario.password) {
       console.log("Las contraseñas coinciden");
+      res.json({ role: user.role });
+      console.log(user.role);
     } else {
       console.log(user);
       console.log(user.password);
@@ -31,33 +33,56 @@ router.post("/login", async (req, res) => {
 // Agregar
 //* USER
 router.post("/users", cors(), (req, res) => {
-  const { user } = User(req.params);
+  const user = User(req.body);
   user
     .save()
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
 });
 //* CAR
-router.post("/cars", cors(), (req, res) => {
-  const { car } = Car(req.params);
-  car
-    .save()
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+router.post("/cars", cors(), async (req, res) => {
+  const car = Car(req.body);
+  const car2 = await Car.findOne({ platenumber: car.plateNumber });
+  if (!car2) {
+    car
+      .save()
+      .then((data) => res.json(data))
+      .catch((error) => res.json({ error: error }));
+  } else {
+    res.json({ error: "Placa ya existe" });
+  }
 });
 //* RENT
-router.post("/rents", cors(), (req, res) => {
-  const { rent } = Rent(req.params);
+router.post("/rents", cors(), async (req, res) => {
+  const rent = Rent(req.body);
+
   rent
     .save()
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
+
+  const car = await Car.findOne({ platenumber: rent.platenumber });
+  Car.updateOne({ _id: car._id }, { $set: { state: false } })
+    .then((data) => res.json(data))
+    .catch((error) => res.json({ error: error }));
 });
 //* RETURN
-router.post("/returns", cors(), (req, res) => {
-  const { returnCar } = ReturnCar(req.body);
+router.post("/returns", cors(), async (req, res) => {
+  const returnCar = ReturnCar(req.body);
   returnCar
     .save()
+    .then((data) => res.json(data))
+    .catch((error) => res.json({ error: error }));
+
+  const rent = await Rent.findOne({ rentnumber: returnCar.rentnumber });
+
+  Rent.updateOne({ _id: rent._id }, { $set: { state: false } })
+    .then((data) => res.json(data))
+    .catch((error) => res.json({ error: error }));
+
+  const car = await Car.findOne({ platenumber: rent.platenumber });
+
+  Car.updateOne({ _id: car._id }, { $set: { state: true } })
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
 });
@@ -97,11 +122,16 @@ router.get("/users/:id", cors(), (req, res) => {
     .catch((error) => res.json({ error: error }));
 });
 //* CAR
-router.get("/cars/:id", cors(), (req, res) => {
-  const { id } = req.params;
-  Car.findById(id)
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+router.get("/cars/:plateNumber", cors(), async (req, res) => {
+  const { plateNumber } = req.params;
+  const car = await Car.findOne({ platenumber: plateNumber });
+  if (car) {
+    Car.findById(car._id)
+      .then((data) => res.json(data))
+      .catch((error) => res.json({ error: error }));
+  } else {
+    res.json({ error: "Auto no existe" });
+  }
 });
 //* RENT
 router.get("/rents/:id", cors(), (req, res) => {
@@ -128,10 +158,10 @@ router.put("/users/:id", cors(), (req, res) => {
     .catch((error) => res.json({ error: error }));
 });
 //* CAR
-router.put("/cars/:id", cors(), (req, res) => {
-  const { id } = req.params;
+router.put("/cars/:plateNumber", cors(), (req, res) => {
+  const { plateNumber } = req.params;
   const { brand, dailyvalue } = req.body;
-  Car.updateOne({ _id: id }, { $set: { brand, dailyvalue } })
+  Car.updateOne({ platenumber: plateNumber }, { $set: { brand, dailyvalue } })
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
 });
@@ -161,11 +191,16 @@ router.delete("/users/:id", cors(), (req, res) => {
     .catch((error) => res.json({ error: error }));
 });
 //* Car
-router.delete("/cars/:id", cors(), (req, res) => {
-  const { id } = req.params;
-  Car.deleteOne({ _id: id })
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+router.delete("/cars/:plateNumber", cors(), async (req, res) => {
+  const { plateNumber } = req.params;
+  const car = await Car.findOne({ platenumber: plateNumber });
+  if (car) {
+    Car.deleteOne({ _id: car._id })
+      .then((data) => res.json(data))
+      .catch((error) => res.json({ error: error }));
+  } else {
+    res.json({ error: "El carro no existe" });
+  }
 });
 //* RENT
 router.delete("/rents/:id", cors(), (req, res) => {

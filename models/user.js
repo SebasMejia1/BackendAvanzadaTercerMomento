@@ -12,23 +12,66 @@ const userSchema = new Schema({
 const carSchema = new Schema({
   platenumber: { type: String },
   brand: { type: String },
-  state: { type: Boolean },
+  state: { type: Boolean, default:true },
   dailyvalue: { type: Number },
 });
 
 const rentSchema = new Schema({
-  rentnumber: { type: Number },
+  rentnumber: { type: Number, unique: true },
   username: { type: String },
   platenumber: { type: String },
-  initialDate: { type: Date, default: Date.now },
+  initialDate: { type: Date },
   finalDate: { type: Date },
-  state: { type: Boolean },
+  state: { type: Boolean, default: true },
+});
+
+// Genera el valor del campo autonumérico antes de guardar el documento
+rentSchema.pre("save", async function (next) {
+  if (!this.isNew) {
+    return next();
+  }
+
+  try {
+    const lastDocument = await this.constructor
+      .findOne({}, { rentnumber: 1 })
+      .sort({ rentnumber: -1 });
+    if (lastDocument) {
+      this.rentnumber = lastDocument.rentnumber + 1;
+    } else {
+      this.rentnumber = 1;
+    }
+  } catch (error) {
+    return next(error);
+  }
+
+  next();
 });
 
 const returnCarSchema = new Schema({
-  returnnumber: { type: Number },
+  returnnumber: { type: Number, unique: true },
   rentnumber: { type: Number },
   returnDate: { type: Date },
+});
+
+returnCarSchema.pre("save", async function (next) {
+  if (!this.isNew) {
+    return next();
+  }
+
+  try {
+    const lastDocument = await this.constructor
+      .findOne({}, { rentnumber: 1 })
+      .sort({ rentnumber: -1 });
+    if (lastDocument) {
+      this.rentnumber = lastDocument.rentnumber + 1;
+    } else {
+      this.rentnumber = 1;
+    }
+  } catch (error) {
+    return next(error);
+  }
+
+  next();
 });
 
 const User = mongoose.model("User", userSchema);
