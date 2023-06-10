@@ -56,15 +56,19 @@ router.post("/cars", cors(), async (req, res) => {
 router.post("/rents", cors(), async (req, res) => {
   const rent = Rent(req.body);
 
-  rent
+  const car = await Car.findOne({ platenumber: rent.platenumber });
+  if(car.state){
+    rent
     .save()
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
 
-  const car = await Car.findOne({ platenumber: rent.platenumber });
   Car.updateOne({ _id: car._id }, { $set: { state: false } })
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+.then((data)=> console.log(data))
+  .catch((error)=> console.log(error));
+  }else{
+    res.json({error: "Auto no disponible"})
+  }
 });
 //* RETURN
 router.post("/returns", cors(), async (req, res) => {
@@ -77,14 +81,14 @@ router.post("/returns", cors(), async (req, res) => {
   const rent = await Rent.findOne({ rentnumber: returnCar.rentnumber });
 
   Rent.updateOne({ _id: rent._id }, { $set: { state: false } })
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+    .then((data)=> console.log(data))
+    .catch((error)=> console.log(error));
 
   const car = await Car.findOne({ platenumber: rent.platenumber });
 
   Car.updateOne({ _id: car._id }, { $set: { state: true } })
-    .then((data) => res.json(data))
-    .catch((error) => res.json({ error: error }));
+    .then((data)=> console.log(data))
+    .catch((error)=> console.log(error));
 });
 
 // Recuperar todos los datos
@@ -154,6 +158,15 @@ router.put("/users/:id", cors(), (req, res) => {
   const { id } = req.params;
   const { name, age, email } = req.body;
   User.updateOne({ _id: id }, { $set: { name, age, email } })
+    .then((data) => res.json(data))
+    .catch((error) => res.json({ error: error }));
+});
+//* FORGOT  
+router.put("/forgot/:username", cors(), (req, res) => {
+  const { username } = req.params;
+  const { reservword, newpassword, } = req.body;
+  console.log(reservword, newpassword, username)
+  User.updateOne({ username: username }, { $set: { reservword, password:newpassword  } })
     .then((data) => res.json(data))
     .catch((error) => res.json({ error: error }));
 });
